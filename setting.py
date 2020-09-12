@@ -1,4 +1,4 @@
-setting = {
+settings = {
     'account': {
         'login': '',
         'password': '',
