@@ -1,5 +1,5 @@
 from bot import TemplateBot
-from settings import settings
+from setting import settings
 from bs4 import BeautifulSoup
 import xlsxwriter
 
