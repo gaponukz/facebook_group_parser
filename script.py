@@ -22,7 +22,7 @@ class FacebookParser(TemplateBot):
 
         for _ in range(self.TIME_TO_SCROLL):
             self.driver.execute_script('scrollTo(0, 1000000000000000)')
-            self.protected_sleep(3.5765456789098765456789098765)
+            self.protected_sleep(4.5765456789098765456789098765)
 
         html = BeautifulSoup(self.driver.page_source, 'html.parser')
         posts = html.select('#m_group_stories_container')[0]
@@ -35,24 +35,21 @@ class FacebookParser(TemplateBot):
                 date = post.find('div', {'class': '_52jc _5qc4 _78cz _24u0 _36xo'}).find('abbr').text
                 description = post.find('div', {'class': '_5rgt _5nk5 _5msi'}).text
                 like = post.find('div', {'class': '_rnk _77ke _2eo- _1e6 _4b44'}).find('div', {'class': '_1g06'}).text
-                try:
-                    comment = post.find('div', {'class': '_rnk _77ke _2eo- _1e6 _4b44'}).find('span', {'class': '_1j-c'}).text
-                except:
-                    comment = ''
-                shared = post.find('div', {'class': '_rnk _77ke _2eo- _1e6 _4b44'}).find('span', {'data-sigil': 'comments-token'}).text
 
-                try:
-                    url = post.find('div', {'class': '_5rgt _5nk5 _5msi'}).find('a').get('href')
-                except:
-                    url = None
+                try: comment = post.find('div', {'class': '_rnk _77ke _2eo- _1e6 _4b44'}).find('span', {'class': '_1j-c'}).text
+                except: comment = ''
+                try: shared = post.find('div', {'class': '_rnk _77ke _2eo- _1e6 _4b44'}).find('span', {'data-sigil': 'comments-token'}).text
+                except: shared = ''
+                try: url = post.find('div', {'class': '_5rgt _5nk5 _5msi'}).find('a').get('href')
+                except: url = None
                 
                 results.append({
                     'author': author,
                     'date': date,
                     'description': description,
-                    'like': like,
-                    'comment': comment.split()[-1] if comment else comment,
-                    'shared': shared.split()[-1],
+                    'like': get_num(like),
+                    'comment': get_num(comment.replace('репостов', '').split()[-1]) if comment else 0,
+                    'shared': get_num(shared.split()[-1]) if shared else 0,
                     'url': ('https://m.facebook.com' + url) if url else None
                 })
             
@@ -75,7 +72,24 @@ def author_statistics(data: dict) -> dict:
         else:
             authors_posts[author] = 1
 
-    return authors_posts
+    popular =  sorted(authors_posts, key = authors_posts.get, reverse = True)
+
+    return {interest: authors_posts[interest] for interest in popular}
+
+def get_num(data: str) -> int:
+        number_zeros = {
+            'млн': '000000',
+            'тыс.': '000'
+        }
+
+        if not any(x in data for x in list(number_zeros)):
+            return int(data)
+
+        num, zero = data.split()
+        num = float(num.replace(',', '.'))
+        zero = int('1' + number_zeros[zero])
+
+        return int(num * zero)
 
 if __name__ == "__main__":
     login = settings['account']['login']
@@ -83,7 +97,7 @@ if __name__ == "__main__":
 
     parser = FacebookParser(show = True)
     parser.login(login, password)
-    data = parser.parse(input("Enter group id: ")) # 229316064860836
+    data = parser.parse(input("Enter group id: ")) # 1643910255830661
 
     filename = settings['program']['posts_filename']
     workbook = xlsxwriter.Workbook(f"{filename}.xlsx") 
